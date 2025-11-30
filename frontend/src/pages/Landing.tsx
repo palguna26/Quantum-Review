@@ -3,6 +3,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Github, Sparkles, CheckCircle2, GitPullRequest, TrendingUp, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+// Backend URL (set at build time for production). Accept either
+// `VITE_BACKEND_URL` or `VITE_API_BASE` (some deployments use the latter).
+// If empty, fall back to a relative path so the local dev proxy continues
+// to work.
+const VITE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
+const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : '';
+
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -15,7 +22,7 @@ const Landing = () => {
           </div>
           
           <Button asChild variant="default" className="btn-hero">
-            <a href="/auth/github" target="_self">
+            <a href={`${backendOrigin || ''}/auth/github`} target="_self">
               <Github className="mr-2 h-4 w-4" />
               Sign in with GitHub
             </a>
@@ -44,7 +51,7 @@ const Landing = () => {
 
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Button asChild size="lg" className="btn-hero">
-              <a href="/auth/github">
+              <a href={`${backendOrigin || ''}/auth/github`}>
                 <Github className="mr-2 h-5 w-5" />
                 Get Started Free
               </a>
@@ -154,7 +161,7 @@ const Landing = () => {
             Join teams using QuantumReview to ship higher quality code faster.
           </p>
           <Button asChild size="lg" className="btn-hero">
-            <a href="/auth/github">
+            <a href={`${backendOrigin || ''}/auth/github`}>
               <Github className="mr-2 h-5 w-5" />
               Sign in with GitHub
             </a>

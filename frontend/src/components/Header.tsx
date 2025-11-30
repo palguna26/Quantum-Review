@@ -3,6 +3,11 @@ import { Github, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RepoSwitcher } from './RepoSwitcher';
 
+// Support both VITE_BACKEND_URL and VITE_API_BASE so Render / CI variables
+// named either way will work.
+const VITE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
+const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : '';
+
 interface HeaderProps {
   user?: { login: string; avatar_url: string };
   repos?: Array<{ repo_full_name: string; owner: string; name: string }>;
@@ -35,7 +40,7 @@ export const Header = ({ user, repos }: HeaderProps) => {
             </div>
           ) : (
             <Button asChild variant="default" className="btn-hero">
-              <a href="/auth/github">
+              <a href={`${backendOrigin || ''}/auth/github`}>
                 <Github className="mr-2 h-4 w-4" />
                 Sign in with GitHub
               </a>
