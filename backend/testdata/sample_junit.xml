@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+    <testsuite name="test_suite" tests="5" failures="1" errors="0" skipped="1">
+        <testcase name="T1::test_signup_email_validation" classname="TestAuth" time="0.123">
+        </testcase>
+        <testcase name="T2::test_login_success" classname="TestAuth" time="0.234">
+        </testcase>
+        <testcase name="T3::test_login_invalid" classname="TestAuth" time="0.345">
+            <failure message="Assertion failed">Expected success but got error</failure>
+        </testcase>
+        <testcase name="test_jwt_verify" classname="autoqa:T4" time="0.456">
+        </testcase>
+        <testcase name="T5::test_error_handler" classname="TestAuth" time="0.567">
+            <skipped/>
+        </testcase>
+    </testsuite>
+</testsuites>
+

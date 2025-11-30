@@ -1,0 +1,71 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: quantumreview_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run linter
+        run: |
+          cd backend
+          pip install flake8 black
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          black --check app/
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/quantumreview_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-secret-key-min-32-chars-long
+          GITHUB_APP_ID: test
+          GITHUB_PRIVATE_KEY: test
+          GITHUB_WEBHOOK_SECRET: test
+          GITHUB_OAUTH_CLIENT_ID: test
+          GITHUB_OAUTH_CLIENT_SECRET: test
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=term-missing
+
