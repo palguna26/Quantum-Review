@@ -60,5 +60,4 @@ Thumbs.db
 
 # Misc
 *.bak
-
-.env.example
+.github/workflows/
