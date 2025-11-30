@@ -102,3 +102,22 @@ export interface Notification {
   created_at: string;
   read: boolean;
 }
+
+export interface GitHubInstallation {
+  installation_id: number;
+  repo_count: number;
+}
+
+export interface GitHubInstallationRepo {
+  repo_full_name: string;
+  name: string;
+  owner: string;
+  private: boolean;
+  html_url: string;
+}
+
+export interface GitHubInstallationReposResponse {
+  installation_id: number;
+  repos: GitHubInstallationRepo[];
+  total_count: number;
+}

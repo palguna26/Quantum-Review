@@ -1,7 +1,11 @@
-"""MongoDB adapter using Motor (async)."""
 from typing import Optional
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import get_settings
+
+try:
+    from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase  # type: ignore
+except Exception:
+    AsyncIOMotorClient = None  # type: ignore
+    AsyncIOMotorDatabase = None  # type: ignore
 
 try:
     from pymongo.uri_parser import parse_uri
@@ -14,14 +18,11 @@ _db: Optional[AsyncIOMotorDatabase] = None
 
 
 async def init_mongo() -> None:
-    """Initialize Motor client and select database.
-
-    Accepts URIs with or without a default database. If the URI doesn't
-    include a database name, falls back to 'quantumreview'.
-    """
     global _client, _db
     uri = settings.MONGODB_URI
     if not uri:
+        return
+    if AsyncIOMotorClient is None:
         return
     _client = AsyncIOMotorClient(uri)
 

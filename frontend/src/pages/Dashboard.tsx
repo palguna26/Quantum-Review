@@ -7,7 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, GitPullRequest, FileText, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import type { User, RepoSummary } from '@/types/api';
+import type { User, RepoSummary, GitHubInstallation, GitHubInstallationRepo } from '@/types/api';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { PRCard } from '@/components/PRCard';
 import { IssueCard } from '@/components/IssueCard';
 
@@ -15,6 +16,9 @@ const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
+  const [selectedInstallation, setSelectedInstallation] = useState<string>("");
+  const [installationRepos, setInstallationRepos] = useState<GitHubInstallationRepo[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -25,6 +29,14 @@ const Dashboard = () => {
         ]);
         setUser(userData);
         setRepos(reposData);
+        if (reposData.length === 0) {
+          try {
+            const installs = await api.getGitHubInstallations();
+            setInstallations(installs);
+          } catch (err) {
+            console.error(err);
+          }
+        }
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
       } finally {
@@ -68,15 +80,63 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold mb-6">Your Repositories</h2>
           
           {repos.length === 0 ? (
-            <Card className="glass-card p-12 text-center">
-              <p className="text-muted-foreground mb-4">No repositories found.</p>
-              <Button asChild>
-                <a href="https://github.com/apps/quantum-review/installations/new" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Install QuantumReview
-                </a>
-              </Button>
-            </Card>
+            <div className="space-y-6">
+              {installations.length === 0 ? (
+                <Card className="glass-card p-12 text-center">
+                  <p className="text-muted-foreground mb-4">No repositories found.</p>
+                  <Button asChild>
+                    <a href="https://github.com/apps/quantum-review/installations/new" target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Install QuantumReview
+                    </a>
+                  </Button>
+                </Card>
+              ) : (
+                <Card className="glass-card p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Select Installation</h3>
+                      <span className="text-sm text-muted-foreground">{installations.length} available</span>
+                    </div>
+                    <Select value={selectedInstallation} onValueChange={async (val) => {
+                      setSelectedInstallation(val);
+                      const id = parseInt(val, 10);
+                      const data = await api.getInstallationRepos(id);
+                      setInstallationRepos(data.repos);
+                    }}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose an installation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {installations.map((inst) => (
+                          <SelectItem key={inst.installation_id} value={String(inst.installation_id)}>
+                            Installation #{inst.installation_id} ({inst.repo_count} repos)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {installationRepos.length > 0 && (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pt-2">
+                        {installationRepos.map((r) => (
+                          <a key={r.repo_full_name} href={r.html_url} target="_blank" rel="noopener noreferrer">
+                            <Card className="glass-card transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 cursor-pointer">
+                              <CardHeader>
+                                <CardTitle className="flex items-start justify-between gap-4">
+                                  <span className="font-mono text-sm truncate">{r.repo_full_name}</span>
+                                  <Badge variant="outline" className="text-xs flex-shrink-0">
+                                    {r.private ? "Private" : "Public"}
+                                  </Badge>
+                                </CardTitle>
+                              </CardHeader>
+                            </Card>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {repos.map((repo) => (

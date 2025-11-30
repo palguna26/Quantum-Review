@@ -19,12 +19,16 @@ async def init_redis() -> None:
     """Initialize Redis client."""
     global redis_client
     if redis_client is None:
-        redis_client = await aioredis.from_url(
-            settings.REDIS_URL,
-            encoding="utf-8",
-            decode_responses=True
-        )
-        logger.info("Redis client initialized")
+        try:
+            redis_client = await aioredis.from_url(
+                settings.REDIS_URL,
+                encoding="utf-8",
+                decode_responses=True
+            )
+            logger.info("Redis client initialized")
+        except Exception as e:
+            logger.warning(f"Redis unavailable: {e}. Continuing without cache.")
+            redis_client = None
 
 
 async def close_redis() -> None:

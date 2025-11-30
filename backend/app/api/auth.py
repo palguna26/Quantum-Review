@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.adapters.db import get_db
 from app.models.user import User
+from app.models.repo import Repo, UserRepoRole
 from app.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -186,6 +187,22 @@ async def github_oauth_callback(
 
     await db.commit()
     await db.refresh(user)
+
+    # Auto-assign viewer role for personal repositories
+    # Link repos that belong to the logged-in username
+    repo_rows = await db.execute(
+        select(Repo).where(Repo.repo_full_name.like(f"{username}/%"))
+    )
+    for repo in repo_rows.scalars().all():
+        existing_role = await db.execute(
+            select(UserRepoRole).where(
+                UserRepoRole.user_id == user.id,
+                UserRepoRole.repo_id == repo.id
+            )
+        )
+        if not existing_role.scalar_one_or_none():
+            db.add(UserRepoRole(user_id=user.id, repo_id=repo.id, role="viewer"))
+    await db.commit()
 
     # Create session token
     session_token = create_session_token(user.id)

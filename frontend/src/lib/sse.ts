@@ -3,7 +3,7 @@
  */
 export interface SSEEvent {
   type: string;
-  data: any;
+  data: unknown;
   timestamp?: string;
 }
 

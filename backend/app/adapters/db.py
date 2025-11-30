@@ -54,7 +54,8 @@ async def close_db() -> None:
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting database session."""
     if async_session_maker is None:
-        raise RuntimeError("Database not initialized. Call init_db() first.")
+        from app.adapters.db import init_db
+        await init_db()
     
     async with async_session_maker() as session:
         try:

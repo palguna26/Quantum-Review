@@ -9,7 +9,7 @@ from app.models.issue import ChecklistItem
 from app.models.test_result import TestResult
 from app.models.report import Report
 from app.models.audit import Notification
-from app.models.user import UserRepoRole
+from app.models.repo import UserRepoRole
 from app.utils.junit_parser import parse_junit_xml
 from app.services.github_auth import get_github_api_client_async
 from app.config import get_settings

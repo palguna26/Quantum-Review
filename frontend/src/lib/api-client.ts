@@ -2,7 +2,15 @@
  * API client with authentication and error handling.
  */
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import type { User, RepoSummary, Issue, PRDetail, Notification } from '@/types/api';
+import type {
+  User,
+  RepoSummary,
+  Issue,
+  PRDetail,
+  Notification,
+  GitHubInstallation,
+  GitHubInstallationReposResponse,
+} from '@/types/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 const AUTH_TOKEN_KEY = 'quantum_auth_token';
@@ -121,6 +129,20 @@ export const api = {
 
   async markNotificationRead(notificationId: string): Promise<void> {
     await axiosInstance.post(`/notifications/${notificationId}/read`);
+  },
+
+  async getGitHubInstallations(): Promise<GitHubInstallation[]> {
+    const response = await axiosInstance.get<{ installations: GitHubInstallation[] }>(
+      '/github/installations'
+    );
+    return response.data.installations;
+  },
+
+  async getInstallationRepos(installationId: number): Promise<GitHubInstallationReposResponse> {
+    const response = await axiosInstance.get<GitHubInstallationReposResponse>(
+      `/github/installations/${installationId}/repos`
+    );
+    return response.data;
   },
 };
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.repo import Repo
 from app.models.issue import Issue, ChecklistItem
-from app.models.user import UserRepoRole
+from app.models.repo import UserRepoRole
 from app.models.audit import Notification
 from app.utils.parser import extract_acceptance_criteria
 from app.services.github_auth import get_github_api_client_async

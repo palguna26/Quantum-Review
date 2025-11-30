@@ -111,13 +111,14 @@ async def health_check():
 
 
 # Include routers
-from app.api import auth, routes, events
+from app.api import auth, routes, events, github as github_api
 from app.webhooks import github
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(routes.router, prefix="/api", tags=["api"])
 app.include_router(events.router, prefix="/events", tags=["events"])
 app.include_router(github.router, prefix="/webhooks", tags=["webhooks"])
+app.include_router(github_api.router, prefix="/api", tags=["github"])
 
 
 @app.get("/")

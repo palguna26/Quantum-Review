@@ -22,7 +22,7 @@ def extract_acceptance_criteria(text: str) -> List[Dict[str, Any]]:
     items = []
     
     # Try to find ## Acceptance Criteria section
-    ac_pattern = r"##\s*Acceptance\s+Criteria\s*\n(.*?)(?=\n##|\Z)"
+    ac_pattern = r"##\s*Acceptance\s+Criteria\s*\n([\s\S]*?)(?=\n##|\Z)"
     ac_match = re.search(ac_pattern, text, re.IGNORECASE | re.DOTALL)
     
     if ac_match:
@@ -30,15 +30,8 @@ def extract_acceptance_criteria(text: str) -> List[Dict[str, Any]]:
         content = ac_match.group(1)
         items = _parse_bullet_list(content)
     else:
-        # Look for first bullet list in the document
-        bullet_pattern = r"^[\*\-\+]\s+(.+)$"
-        matches = re.finditer(bullet_pattern, text, re.MULTILINE)
-        for match in matches:
-            items.append({
-                "text": match.group(1).strip(),
-                "required": True,
-                "tags": [],
-            })
+        # Parse bullet points anywhere in the document
+        items = _parse_bullet_list(text)
     
     # Assign IDs (C1, C2, etc.)
     for idx, item in enumerate(items, start=1):
@@ -59,7 +52,7 @@ def _parse_bullet_list(content: str) -> List[Dict[str, Any]]:
     items = []
     
     # Pattern for bullet points (supports *, -, +)
-    bullet_pattern = r"^[\*\-\+]\s+(.+)$"
+    bullet_pattern = r"^\s*[\*\-\+]\s+(.+)$"
     lines = content.split("\n")
     
     for line in lines:
@@ -110,8 +103,8 @@ def extract_changed_symbols(diff_text: str, file_path: str) -> List[str]:
     ext = file_path.split(".")[-1].lower()
     
     if ext in ["py"]:
-        # Python: look for def and class
-        pattern = r"^\+.*?(?:def|class)\s+(\w+)"
+        # Python: look for def and class (allow leading spaces before '+')
+        pattern = r"^\s*\+.*?(?:def|class)\s+(\w+)"
         matches = re.finditer(pattern, diff_text, re.MULTILINE)
         for match in matches:
             symbols.append(match.group(1))
@@ -119,9 +112,9 @@ def extract_changed_symbols(diff_text: str, file_path: str) -> List[str]:
     elif ext in ["js", "jsx", "ts", "tsx"]:
         # JavaScript/TypeScript: look for function, class, const/let exports
         patterns = [
-            r"^\+.*?(?:function|class)\s+(\w+)",
-            r"^\+.*?(?:const|let|var)\s+(\w+)\s*=\s*(?:\(|function|class)",
-            r"^\+.*?export\s+(?:function|class|const|let)\s+(\w+)",
+            r"^\s*\+.*?(?:function|class)\s+(\w+)",
+            r"^\s*\+.*?(?:const|let|var)\s+(\w+)\s*=\s*(?:\(|function|class)",
+            r"^\s*\+.*?export\s+(?:function|class|const|let)\s+(\w+)",
         ]
         for pattern in patterns:
             matches = re.finditer(pattern, diff_text, re.MULTILINE)
