@@ -23,6 +23,11 @@ const LoginCallback = () => {
           console.warn('[LoginCallback] No token in URL');
         }
         
+        // DEBUG: Check backend connectivity
+        const backendUrl = import.meta.env.VITE_API_BASE || 'https://quantum-review.onrender.com';
+        console.log('[LoginCallback] Backend URL:', backendUrl);
+        console.log('[LoginCallback] Will call:', `${backendUrl}/api/me`);
+        
         // Fetch user profile to verify authentication
         console.log('[LoginCallback] Calling api.getMe()...');
         const user = await api.getMe();
