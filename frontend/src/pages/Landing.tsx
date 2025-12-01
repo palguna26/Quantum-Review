@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
 // VITE_API_BASE must be set to the backend origin.
 const VITE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
 const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : 'https://quantum-review.onrender.com';
+console.log('[Landing] VITE_API_BASE from build:', import.meta.env.VITE_API_BASE);
+console.log('[Landing] Computed backendOrigin:', backendOrigin);
 
 const Landing = () => {
   return (
