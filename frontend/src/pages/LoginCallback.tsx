@@ -14,12 +14,19 @@ const LoginCallback = () => {
       try {
         // Check if token is in URL (from backend redirect)
         const token = searchParams.get('token');
+        console.log('[LoginCallback] Token from URL:', token ? token.substring(0, 20) + '...' : 'NOT FOUND');
+        
         if (token) {
           auth.setToken(token);
+          console.log('[LoginCallback] Token stored in localStorage');
+        } else {
+          console.warn('[LoginCallback] No token in URL');
         }
         
         // Fetch user profile to verify authentication
-        await api.getMe();
+        console.log('[LoginCallback] Calling api.getMe()...');
+        const user = await api.getMe();
+        console.log('[LoginCallback] User fetched:', user);
         
         toast({
           title: 'Success!',
@@ -28,7 +35,7 @@ const LoginCallback = () => {
 
         navigate('/dashboard');
       } catch (error) {
-        console.error('Auth error:', error);
+        console.error('[LoginCallback] Auth error:', error);
         toast({
           title: 'Authentication Failed',
           description: 'Unable to sign in. Please try again.',

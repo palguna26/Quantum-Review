@@ -5,10 +5,10 @@ import { Link } from 'react-router-dom';
 
 // Backend URL (set at build time for production). Accept either
 // `VITE_BACKEND_URL` or `VITE_API_BASE` (some deployments use the latter).
-// If empty, fall back to a relative path so the local dev proxy continues
-// to work.
+// For OAuth flows, we need an absolute URL. In production on Render,
+// VITE_API_BASE must be set to the backend origin.
 const VITE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
-const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : '';
+const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : 'https://quantum-review.onrender.com';
 
 const Landing = () => {
   return (

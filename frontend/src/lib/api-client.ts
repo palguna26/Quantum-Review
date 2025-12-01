@@ -30,6 +30,9 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[API] Request with token:', config.url, 'Headers:', config.headers);
+    } else {
+      console.log('[API] Request without token:', config.url);
     }
     return config;
   },
@@ -40,8 +43,12 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor for error handling
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API] Response success:', response.config.url, response.status);
+    return response;
+  },
   (error: AxiosError) => {
+    console.error('[API] Response error:', error.config?.url, error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem(AUTH_TOKEN_KEY);

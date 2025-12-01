@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { RepoSwitcher } from './RepoSwitcher';
 
 // Support both VITE_BACKEND_URL and VITE_API_BASE so Render / CI variables
-// named either way will work.
+// named either way will work. For OAuth, we need an absolute URL.
 const VITE_BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
-const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : '';
+const backendOrigin = VITE_BACKEND_URL ? VITE_BACKEND_URL.replace(/\/+$/, '') : 'https://quantum-review.onrender.com';
 
 interface HeaderProps {
   user?: { login: string; avatar_url: string };
