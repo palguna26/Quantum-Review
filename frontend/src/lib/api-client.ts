@@ -76,27 +76,27 @@ export const auth = {
 // API functions
 export const api = {
   async getMe(): Promise<User> {
-    const response = await axiosInstance.get<User>('/me');
+    const response = await axiosInstance.get<User>('/api/me');
     return response.data;
   },
 
   async getRepos(): Promise<RepoSummary[]> {
-    const response = await axiosInstance.get<RepoSummary[]>('/repos');
+    const response = await axiosInstance.get<RepoSummary[]>('/api/repos');
     return response.data;
   },
 
   async getRepo(owner: string, repo: string): Promise<RepoSummary> {
-    const response = await axiosInstance.get<RepoSummary>(`/repos/${owner}/${repo}`);
+    const response = await axiosInstance.get<RepoSummary>(`/api/repos/${owner}/${repo}`);
     return response.data;
   },
 
   async getIssues(owner: string, repo: string): Promise<Issue[]> {
-    const response = await axiosInstance.get<Issue[]>(`/repos/${owner}/${repo}/issues`);
+    const response = await axiosInstance.get<Issue[]>(`/api/repos/${owner}/${repo}/issues`);
     return response.data;
   },
 
   async getIssue(owner: string, repo: string, issueNumber: number): Promise<Issue> {
-    const response = await axiosInstance.get<Issue>(`/repos/${owner}/${repo}/issues/${issueNumber}`);
+    const response = await axiosInstance.get<Issue>(`/api/repos/${owner}/${repo}/issues/${issueNumber}`);
     return response.data;
   },
 
@@ -108,46 +108,46 @@ export const api = {
     status: 'pending' | 'passed' | 'failed' | 'skipped'
   ): Promise<void> {
     await axiosInstance.patch(
-      `/repos/${owner}/${repo}/issues/${issueNumber}/checklist/${itemId}`,
+      `/api/repos/${owner}/${repo}/issues/${issueNumber}/checklist/${itemId}`,
       { status }
     );
   },
 
   async regenerateChecklist(owner: string, repo: string, issueNumber: number): Promise<{ status: string; job_id?: string }> {
     const response = await axiosInstance.post<{ status: string; job_id?: string }>(
-      `/repos/${owner}/${repo}/issues/${issueNumber}/regenerate`
+      `/api/repos/${owner}/${repo}/issues/${issueNumber}/regenerate`
     );
     return response.data;
   },
 
   async getPR(owner: string, repo: string, prNumber: number): Promise<PRDetail> {
-    const response = await axiosInstance.get<PRDetail>(`/repos/${owner}/${repo}/prs/${prNumber}`);
+    const response = await axiosInstance.get<PRDetail>(`/api/repos/${owner}/${repo}/prs/${prNumber}`);
     return response.data;
   },
 
   async revalidatePR(owner: string, repo: string, prNumber: number): Promise<void> {
-    await axiosInstance.post(`/repos/${owner}/${repo}/prs/${prNumber}/revalidate`);
+    await axiosInstance.post(`/api/repos/${owner}/${repo}/prs/${prNumber}/revalidate`);
   },
 
   async getNotifications(): Promise<Notification[]> {
-    const response = await axiosInstance.get<Notification[]>('/notifications');
+    const response = await axiosInstance.get<Notification[]>('/api/notifications');
     return response.data;
   },
 
   async markNotificationRead(notificationId: string): Promise<void> {
-    await axiosInstance.post(`/notifications/${notificationId}/read`);
+    await axiosInstance.post(`/api/notifications/${notificationId}/read`);
   },
 
   async getGitHubInstallations(): Promise<GitHubInstallation[]> {
     const response = await axiosInstance.get<{ installations: GitHubInstallation[] }>(
-      '/github/installations'
+      '/api/github/installations'
     );
     return response.data.installations;
   },
 
   async getInstallationRepos(installationId: number): Promise<GitHubInstallationReposResponse> {
     const response = await axiosInstance.get<GitHubInstallationReposResponse>(
-      `/github/installations/${installationId}/repos`
+      `/api/github/installations/${installationId}/repos`
     );
     return response.data;
   },
