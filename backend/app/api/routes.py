@@ -89,6 +89,24 @@ async def get_repos(
         )
         issue_count = issue_count_result.scalar() or 0
         
+        # Recent PR numbers (by created_at)
+        recent_prs_result = await db.execute(
+            select(PullRequest.pr_number)
+            .where(PullRequest.repo_id == repo.id)
+            .order_by(PullRequest.created_at.desc())
+            .limit(5)
+        )
+        recent_pr_numbers = [row[0] for row in recent_prs_result.all()]
+
+        # Recent Issue numbers (by created_at)
+        recent_issues_result = await db.execute(
+            select(Issue.issue_number)
+            .where(Issue.repo_id == repo.id)
+            .order_by(Issue.created_at.desc())
+            .limit(5)
+        )
+        recent_issue_numbers = [row[0] for row in recent_issues_result.all()]
+
         # Calculate health score (simplified - can be enhanced)
         health_score = 85  # Placeholder
         
@@ -102,6 +120,8 @@ async def get_repos(
             is_installed=repo.is_installed,
             pr_count=pr_count,
             issue_count=issue_count,
+            recent_pr_numbers=recent_pr_numbers,
+            recent_issue_numbers=recent_issue_numbers,
         ))
     
     return repos
@@ -152,6 +172,24 @@ async def get_repo(
     
     health_score = 85  # Placeholder
     
+    # Recent PR numbers
+    recent_prs_result = await db.execute(
+        select(PullRequest.pr_number)
+        .where(PullRequest.repo_id == repo_obj.id)
+        .order_by(PullRequest.created_at.desc())
+        .limit(5)
+    )
+    recent_pr_numbers = [row[0] for row in recent_prs_result.all()]
+
+    # Recent Issue numbers
+    recent_issues_result = await db.execute(
+        select(Issue.issue_number)
+        .where(Issue.repo_id == repo_obj.id)
+        .order_by(Issue.created_at.desc())
+        .limit(5)
+    )
+    recent_issue_numbers = [row[0] for row in recent_issues_result.all()]
+
     return RepoSummaryResponse(
         repo_full_name=repo_obj.repo_full_name,
         owner=owner,
@@ -160,6 +198,8 @@ async def get_repo(
         is_installed=repo_obj.is_installed,
         pr_count=pr_count,
         issue_count=issue_count,
+        recent_pr_numbers=recent_pr_numbers,
+        recent_issue_numbers=recent_issue_numbers,
     )
 
 

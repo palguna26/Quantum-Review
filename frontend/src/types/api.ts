@@ -16,6 +16,8 @@ export interface RepoSummary {
   pr_count: number;
   issue_count: number;
   last_activity?: string;
+  recent_pr_numbers: number[];
+  recent_issue_numbers: number[];
 }
 
 export interface ChecklistItem {

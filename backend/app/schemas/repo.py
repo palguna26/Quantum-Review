@@ -13,6 +13,8 @@ class RepoSummaryResponse(BaseModel):
     pr_count: int
     issue_count: int
     last_activity: Optional[str] = None
+    recent_pr_numbers: list[int] = []
+    recent_issue_numbers: list[int] = []
     
     class Config:
         from_attributes = True

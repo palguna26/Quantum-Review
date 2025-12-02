@@ -172,6 +172,11 @@ const Dashboard = () => {
                               <span className="text-xs">Pull Requests</span>
                             </div>
                             <p className="text-2xl font-bold">{repo.pr_count}</p>
+                            {repo.recent_pr_numbers && repo.recent_pr_numbers.length > 0 && (
+                              <p className="text-xs text-muted-foreground font-mono mt-1">
+                                #{repo.recent_pr_numbers.slice(0, 5).join(', #')}
+                              </p>
+                            )}
                           </div>
                           
                           <div>
@@ -180,6 +185,11 @@ const Dashboard = () => {
                               <span className="text-xs">Issues</span>
                             </div>
                             <p className="text-2xl font-bold">{repo.issue_count}</p>
+                            {repo.recent_issue_numbers && repo.recent_issue_numbers.length > 0 && (
+                              <p className="text-xs text-muted-foreground font-mono mt-1">
+                                #{repo.recent_issue_numbers.slice(0, 5).join(', #')}
+                              </p>
+                            )}
                           </div>
                         </div>
 
