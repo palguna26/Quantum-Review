@@ -102,10 +102,19 @@ const RepoPage = () => {
               </Button>
 
               {!repoData.is_installed && (
-                <Button asChild>
-                  <a href={`/api/repos/${owner}/${repo}/install`}>
-                    Install QuantumReview
-                  </a>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const resp = await fetch(`/api/repos/${owner}/${repo}/install`, { credentials: 'include' });
+                      const data = await resp.json();
+                      const url = data.install_url || `https://github.com/apps/${'quantumreview'}/installations/new`;
+                      window.open(url, '_blank');
+                    } catch (e) {
+                      window.open(`https://github.com/apps/${'quantumreview'}/installations/new`, '_blank');
+                    }
+                  }}
+                >
+                  Install QuantumReview
                 </Button>
               )}
             </div>

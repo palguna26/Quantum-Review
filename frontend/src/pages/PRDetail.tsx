@@ -71,6 +71,23 @@ const PRDetailPage = () => {
     }
   };
 
+  const handleRecommendMerge = async () => {
+    if (!owner || !repo || !prNumber) return;
+    try {
+      await api.flagForMerge(owner, repo, parseInt(prNumber));
+      toast({
+        title: 'Merge Recommendation Recorded',
+        description: 'Your recommendation to merge this PR has been logged.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Action Failed',
+        description: 'Unable to record merge recommendation. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -163,7 +180,7 @@ const PRDetailPage = () => {
             </Button>
 
             {pr.validation_status === 'validated' && (
-              <Button className="btn-hero">
+              <Button className="btn-hero" onClick={handleRecommendMerge}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
                 Recommend Merge
               </Button>

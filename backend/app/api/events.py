@@ -1,13 +1,13 @@
 """Server-Sent Events (SSE) endpoint for real-time updates."""
 import asyncio
 import json
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 import redis.asyncio as aioredis
 from app.config import get_settings
 from app.adapters.db import get_db
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_user_from_token
 from app.models.user import User
 from app.logging_config import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,10 +40,12 @@ async def event_stream(user_id: int) -> AsyncIterator[str]:
         yield f"data: {json.dumps({'type': 'error', 'message': 'SSE unavailable'})}\n\n"
         return
     
-    # Create a channel for user-specific events
+    # Create channels for user-specific events and broadcast
     channel = f"user:{user_id}:events"
+    broadcast_channel = "broadcast:events"
     pubsub = redis_pubsub.pubsub()
     await pubsub.subscribe(channel)
+    await pubsub.subscribe(broadcast_channel)
     
     # Send initial connection event
     yield f"data: {json.dumps({'type': 'connected', 'user_id': user_id})}\n\n"
@@ -71,13 +73,15 @@ async def event_stream(user_id: int) -> AsyncIterator[str]:
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
     finally:
         await pubsub.unsubscribe(channel)
+        await pubsub.unsubscribe(broadcast_channel)
         await pubsub.close()
 
 
 @router.get("/stream")
 async def stream_events(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    token: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """SSE endpoint for real-time updates.
@@ -89,6 +93,20 @@ async def stream_events(
     - Health score updated
     """
     if not current_user:
+        # Allow authentication via `?token=` query for SSE (EventSource cannot set headers)
+        if token:
+            user_id = get_user_from_token(token)
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Invalid token")
+            return StreamingResponse(
+                event_stream(user_id),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                }
+            )
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     return StreamingResponse(

@@ -55,7 +55,16 @@ async def publish_repo_event(repo_id: int, event_type: str, data: dict):
         event_type: Type of event
         data: Event payload
     """
-    # TODO: Query users with access to this repo from UserRepoRole
-    # For now, this is a placeholder
-    logger.debug(f"Repo event {event_type} for repo {repo_id}")
+    try:
+        client = await get_redis_client()
+        channel = "broadcast:events"
+        event = {
+            "type": event_type,
+            "data": {**data, "repo_id": repo_id},
+            "timestamp": None,
+        }
+        await client.publish(channel, json.dumps(event))
+        logger.debug(f"Published broadcast repo event {event_type} for repo {repo_id}")
+    except Exception as e:
+        logger.error(f"Failed to publish repo event: {e}", exc_info=True)
 

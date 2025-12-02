@@ -129,6 +129,10 @@ export const api = {
     await axiosInstance.post(`/api/repos/${owner}/${repo}/prs/${prNumber}/revalidate`);
   },
 
+  async flagForMerge(owner: string, repo: string, prNumber: number): Promise<void> {
+    await axiosInstance.post(`/api/repos/${owner}/${repo}/prs/${prNumber}/flag_for_merge`);
+  },
+
   async getNotifications(): Promise<Notification[]> {
     const response = await axiosInstance.get<Notification[]>('/api/notifications');
     return response.data;

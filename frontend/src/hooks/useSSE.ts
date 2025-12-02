@@ -17,7 +17,9 @@ export function useSSE(
       return; // Not authenticated
     }
 
-    const client = getSSEClient('/events', token);
+    const backendBase = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_BASE as string) || '';
+    const sseBase = (backendBase ? backendBase.replace(/\/+$/, '') : '') + '/events';
+    const client = getSSEClient(sseBase, token);
     clientRef.current = client;
 
     // Register handlers for specified event types
