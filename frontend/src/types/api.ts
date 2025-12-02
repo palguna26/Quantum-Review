@@ -18,6 +18,8 @@ export interface RepoSummary {
   last_activity?: string;
   recent_pr_numbers: number[];
   recent_issue_numbers: number[];
+  stars?: number;
+  languages?: string[];
 }
 
 export interface ChecklistItem {

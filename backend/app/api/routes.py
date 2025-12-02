@@ -1,6 +1,6 @@
 """Main API routes."""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
@@ -18,6 +18,7 @@ from app.schemas.pr import PRDetailResponse, TestResultResponse, CodeHealthIssue
 from app.schemas.notification import NotificationResponse
 from app.models.pr import PullRequest, TestResult
 from app.models.code_health import CodeHealth
+from app.services.github_auth import get_github_api_client_async
 from app.models.audit import AuditLog
 from app.services.notifications import get_user_notifications, mark_notification_read
 from app.config import get_settings
@@ -60,7 +61,8 @@ async def get_me(
 @router.get("/repos", response_model=List[RepoSummaryResponse])
 async def get_repos(
     current_user: Optional[User] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    filter: Optional[str] = Query(None)
 ):
     """List user's managed repos."""
     if not current_user:
@@ -107,10 +109,49 @@ async def get_repos(
         )
         recent_issue_numbers = [row[0] for row in recent_issues_result.all()]
 
-        # Calculate health score (simplified - can be enhanced)
-        health_score = 85  # Placeholder
-        
+        # Calculate health score (simplified)
+        health_score = 85
+
+        # Fetch GitHub repo metadata if installed
+        stars = 0
+        languages_list: List[str] = []
+        last_activity = None
         owner, name = repo.repo_full_name.split("/", 1)
+        if repo.is_installed and repo.installation_id:
+            try:
+                client = await get_github_api_client_async(repo.installation_id)
+                repo_resp = await client.get(f"/repos/{repo.repo_full_name}")
+                repo_json = repo_resp.json()
+                stars = int(repo_json.get("stargazers_count") or 0)
+                last_activity = repo_json.get("pushed_at")
+                langs_resp = await client.get(f"/repos/{repo.repo_full_name}/languages")
+                langs_json = langs_resp.json() or {}
+                languages_list = list(langs_json.keys())[:5]
+                await client.aclose()
+            except Exception:
+                pass
+
+        # Filters
+        matches_filter = True
+        if filter == "active":
+            matches_filter = bool(last_activity)
+        elif filter == "needs_review":
+            nr_count_result = await db.execute(
+                select(func.count(PullRequest.id))
+                .where(PullRequest.repo_id == repo.id)
+                .where(PullRequest.validation_status != "validated")
+            )
+            matches_filter = (nr_count_result.scalar() or 0) > 0
+        elif filter == "critical":
+            critical_count_result = await db.execute(
+                select(func.count(CodeHealth.id))
+                .join(PullRequest, CodeHealth.pr_id == PullRequest.id)
+                .where(PullRequest.repo_id == repo.id)
+                .where(CodeHealth.score <= 50)
+            )
+            matches_filter = (critical_count_result.scalar() or 0) > 0
+        if not matches_filter:
+            continue
         
         repos.append(RepoSummaryResponse(
             repo_full_name=repo.repo_full_name,
@@ -122,6 +163,9 @@ async def get_repos(
             issue_count=issue_count,
             recent_pr_numbers=recent_pr_numbers,
             recent_issue_numbers=recent_issue_numbers,
+            last_activity=last_activity,
+            stars=stars,
+            languages=languages_list,
         ))
     
     return repos
@@ -170,7 +214,7 @@ async def get_repo(
     )
     issue_count = issue_count_result.scalar() or 0
     
-    health_score = 85  # Placeholder
+    health_score = 85
     
     # Recent PR numbers
     recent_prs_result = await db.execute(
@@ -190,6 +234,24 @@ async def get_repo(
     )
     recent_issue_numbers = [row[0] for row in recent_issues_result.all()]
 
+    # Metadata from GitHub if installed
+    stars = 0
+    languages_list: List[str] = []
+    last_activity = None
+    if repo_obj.is_installed and repo_obj.installation_id:
+        try:
+            client = await get_github_api_client_async(repo_obj.installation_id)
+            repo_resp = await client.get(f"/repos/{repo_obj.repo_full_name}")
+            repo_json = repo_resp.json()
+            stars = int(repo_json.get("stargazers_count") or 0)
+            last_activity = repo_json.get("pushed_at")
+            langs_resp = await client.get(f"/repos/{repo_obj.repo_full_name}/languages")
+            langs_json = langs_resp.json() or {}
+            languages_list = list(langs_json.keys())[:5]
+            await client.aclose()
+        except Exception:
+            pass
+
     return RepoSummaryResponse(
         repo_full_name=repo_obj.repo_full_name,
         owner=owner,
@@ -200,6 +262,9 @@ async def get_repo(
         issue_count=issue_count,
         recent_pr_numbers=recent_pr_numbers,
         recent_issue_numbers=recent_issue_numbers,
+        last_activity=last_activity,
+        stars=stars,
+        languages=languages_list,
     )
 
 

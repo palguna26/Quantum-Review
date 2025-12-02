@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string>("");
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [selectedInstallation, setSelectedInstallation] = useState<string>("");
   const [installationRepos, setInstallationRepos] = useState<GitHubInstallationRepo[]>([]);
@@ -25,7 +26,7 @@ const Dashboard = () => {
       try {
         const [userData, reposData] = await Promise.all([
           api.getMe(),
-          api.getRepos(),
+          api.getRepos(filter || undefined),
         ]);
         setUser(userData);
         setRepos(reposData);
@@ -45,7 +46,7 @@ const Dashboard = () => {
     };
 
     loadData();
-  }, []);
+  }, [filter]);
 
   if (loading) {
     return (
@@ -78,6 +79,19 @@ const Dashboard = () => {
         {/* Repository Grid */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Your Repositories</h2>
+          <div className="mb-4 flex items-center gap-3">
+            <Select value={filter} onValueChange={(val) => setFilter(val)}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Filter repositories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="critical">Critical Risk</SelectItem>
+                <SelectItem value="needs_review">Needs Review</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           {repos.length === 0 ? (
             <div className="space-y-6">
@@ -193,11 +207,21 @@ const Dashboard = () => {
                           </div>
                         </div>
 
-                        {repo.last_activity && (
-                          <p className="text-xs text-muted-foreground">
-                            Last activity: {repo.last_activity}
-                          </p>
-                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            {repo.languages && repo.languages.length > 0 && (
+                              <span className="font-mono truncate">{repo.languages.join(', ')}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {typeof repo.stars === 'number' && (
+                              <span>⭐ {repo.stars}</span>
+                            )}
+                            {repo.last_activity && (
+                              <span>Last: {new Date(repo.last_activity).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

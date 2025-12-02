@@ -15,6 +15,8 @@ class RepoSummaryResponse(BaseModel):
     last_activity: Optional[str] = None
     recent_pr_numbers: list[int] = []
     recent_issue_numbers: list[int] = []
+    stars: int = 0
+    languages: list[str] = []
     
     class Config:
         from_attributes = True

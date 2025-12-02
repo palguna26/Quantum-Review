@@ -80,8 +80,9 @@ export const api = {
     return response.data;
   },
 
-  async getRepos(): Promise<RepoSummary[]> {
-    const response = await axiosInstance.get<RepoSummary[]>('/api/repos');
+  async getRepos(filter?: string): Promise<RepoSummary[]> {
+    const url = filter ? `/api/repos?filter=${encodeURIComponent(filter)}` : '/api/repos';
+    const response = await axiosInstance.get<RepoSummary[]>(url);
     return response.data;
   },
 
