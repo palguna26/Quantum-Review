@@ -16,7 +16,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("");
+  const [filter, setFilter] = useState<string>("all");
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [selectedInstallation, setSelectedInstallation] = useState<string>("");
   const [installationRepos, setInstallationRepos] = useState<GitHubInstallationRepo[]>([]);
@@ -26,7 +26,7 @@ const Dashboard = () => {
       try {
         const [userData, reposData] = await Promise.all([
           api.getMe(),
-          api.getRepos(filter || undefined),
+          api.getRepos(filter === 'all' ? undefined : filter),
         ]);
         setUser(userData);
         setRepos(reposData);
@@ -85,7 +85,7 @@ const Dashboard = () => {
                 <SelectValue placeholder="Filter repositories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="critical">Critical Risk</SelectItem>
                 <SelectItem value="needs_review">Needs Review</SelectItem>
