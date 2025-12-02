@@ -12,6 +12,7 @@ class User(Base, TimestampMixin):
     username = Column(String(255), nullable=False, index=True)
     email = Column(String(255), nullable=True)
     avatar_url = Column(String(512), nullable=True)
+    github_token = Column(String(1024), nullable=True)  # OAuth token for API access
     
     # Relationships
     repo_roles = relationship("UserRepoRole", back_populates="user", cascade="all, delete-orphan")

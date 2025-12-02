@@ -51,22 +51,54 @@ async def list_user_installations(
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    result = await db.execute(
-        select(Repo.installation_id, func.count(Repo.id))
-        .join(UserRepoRole)
-        .where(UserRepoRole.user_id == current_user.id)
-        .where(Repo.installation_id.isnot(None))
-        .group_by(Repo.installation_id)
-    )
-    rows = result.all()
+    # Fetch installations from GitHub API using the user's access token
+    # (stored in the user's GitHub token that was used during OAuth)
+    github_token = current_user.github_token
+    if not github_token:
+        logger.warning(f"User {current_user.id} has no GitHub token stored")
+        return {"installations": []}
 
-    installations = [
-        {"installation_id": int(installation_id), "repo_count": int(count)}
-        for installation_id, count in rows
-        if installation_id is not None
-    ]
-
-    return {"installations": installations}
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # Get user's app installations via GitHub API
+            # Use the user's OAuth token to list installations accessible to that user
+            headers = {
+                "Authorization": f"token {github_token}",
+                "Accept": "application/vnd.github+json",
+            }
+            response = await client.get(
+                "https://api.github.com/user/installations",
+                headers=headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            installations = []
+            for install in data.get("installations", []):
+                installation_id = install.get("id")
+                
+                # Get repo count for this installation
+                repo_count_response = await client.get(
+                    f"https://api.github.com/user/installations/{installation_id}/repositories",
+                    headers=headers,
+                    timeout=10.0,
+                )
+                repo_count_response.raise_for_status()
+                repo_count = len(repo_count_response.json().get("repositories", []))
+                
+                installations.append({
+                    "installation_id": installation_id,
+                    "repo_count": repo_count,
+                })
+            
+            logger.info(f"Retrieved {len(installations)} GitHub App installations for user {current_user.id}")
+            return {"installations": installations}
+    
+    except Exception as e:
+        logger.error(f"Failed to list GitHub installations for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail="Failed to fetch GitHub installations")
 
 
 @router.get("/github/installations/{installation_id}/repos")

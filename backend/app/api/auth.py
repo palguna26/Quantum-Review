@@ -175,6 +175,7 @@ async def github_oauth_callback(
         user.username = username
         user.email = primary_email or user.email
         user.avatar_url = avatar_url or user.avatar_url
+        user.github_token = access_token  # Store the OAuth token
     else:
         # Create new user
         user = User(
@@ -182,6 +183,7 @@ async def github_oauth_callback(
             username=username,
             email=primary_email,
             avatar_url=avatar_url,
+            github_token=access_token,  # Store the OAuth token
         )
         db.add(user)
 
