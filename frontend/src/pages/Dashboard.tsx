@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, GitPullRequest, FileText, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import type { User, RepoSummary, GitHubInstallation, GitHubInstallationRepo } from '@/types/api';
+import type { User, RepoSummary, GitHubInstallation, GitHubInstallationRepo, PRDetail, Issue } from '@/types/api';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { PRCard } from '@/components/PRCard';
 import { IssueCard } from '@/components/IssueCard';
@@ -20,6 +20,8 @@ const Dashboard = () => {
   const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
   const [selectedInstallation, setSelectedInstallation] = useState<string>("");
   const [installationRepos, setInstallationRepos] = useState<GitHubInstallationRepo[]>([]);
+  const [recentPRs, setRecentPRs] = useState<PRDetail[]>([]);
+  const [pendingIssues, setPendingIssues] = useState<Issue[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -47,6 +49,29 @@ const Dashboard = () => {
 
     loadData();
   }, [filter]);
+
+  useEffect(() => {
+    const loadRecent = async () => {
+      if (repos.length === 0) {
+        setRecentPRs([]);
+        setPendingIssues([]);
+        return;
+      }
+      const { owner, name } = repos[0];
+      try {
+        const [prs, issues] = await Promise.all([
+          api.getRepoPRs(owner, name, { status: 'open', sort: 'created', order: 'desc' }),
+          api.getRepoIssues(owner, name),
+        ]);
+        setRecentPRs(prs.slice(0, 2));
+        setPendingIssues(issues.slice(0, 2));
+      } catch (err) {
+        console.error('Failed to load recent activity:', err);
+      }
+    };
+
+    loadRecent();
+  }, [repos]);
 
   if (loading) {
     return (
@@ -169,16 +194,13 @@ const Dashboard = () => {
                     
                     <CardContent>
                       <div className="space-y-4">
-                        {/* Health Score */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
                             <TrendingUp className="h-4 w-4 text-primary" />
-                            <span className="text-sm text-muted-foreground">Health Score</span>
+                            <span className="text-xs">Health Score</span>
                           </div>
                           <span className="text-2xl font-bold text-primary">{repo.health_score}</span>
                         </div>
-
-                        {/* Stats */}
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
                           <div>
                             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -206,22 +228,9 @@ const Dashboard = () => {
                             )}
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            {repo.languages && repo.languages.length > 0 && (
-                              <span className="font-mono truncate">{repo.languages.join(', ')}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {typeof repo.stars === 'number' && (
-                              <span>⭐ {repo.stars}</span>
-                            )}
-                            {repo.last_activity && (
-                              <span>Last: {new Date(repo.last_activity).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
+                        {repo.last_activity && (
+                          <p className="text-xs text-muted-foreground">Last activity: {formatRelativeTime(repo.last_activity)}</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -238,24 +247,18 @@ const Dashboard = () => {
             <div>
               <h2 className="text-2xl font-bold mb-6">Recent Pull Requests</h2>
               <div className="space-y-4">
-                <PRCard
-                  prNumber={42}
-                  title="Implement user authentication"
-                  author="quantum-dev"
-                  healthScore={92}
-                  repoOwner={repos[0].owner}
-                  repoName={repos[0].name}
-                  validationStatus="validated"
-                />
-                <PRCard
-                  prNumber={38}
-                  title="Add database migration system"
-                  author="quantum-dev"
-                  healthScore={85}
-                  repoOwner={repos[0].owner}
-                  repoName={repos[0].name}
-                  validationStatus="pending"
-                />
+                {recentPRs.map((pr) => (
+                  <PRCard
+                    key={pr.pr_number}
+                    prNumber={pr.pr_number}
+                    title={pr.title}
+                    author={pr.author}
+                    healthScore={pr.health_score}
+                    repoOwner={repos[0].owner}
+                    repoName={repos[0].name}
+                    validationStatus={pr.validation_status}
+                  />
+                ))}
               </div>
             </div>
 
@@ -263,32 +266,14 @@ const Dashboard = () => {
             <div>
               <h2 className="text-2xl font-bold mb-6">Pending Issues</h2>
               <div className="space-y-4">
-                <IssueCard
-                  issue={{
-                    issue_number: 42,
-                    title: 'Add authentication middleware',
-                    status: 'completed',
-                    created_at: '2024-01-15T10:00:00Z',
-                    updated_at: '2024-01-15T14:30:00Z',
-                    checklist_summary: { total: 5, passed: 4, failed: 0, pending: 1 },
-                    github_url: `https://github.com/${repos[0].owner}/${repos[0].name}/issues/42`,
-                  }}
-                  repoOwner={repos[0].owner}
-                  repoName={repos[0].name}
-                />
-                <IssueCard
-                  issue={{
-                    issue_number: 38,
-                    title: 'Optimize database queries',
-                    status: 'processing',
-                    created_at: '2024-01-14T09:00:00Z',
-                    updated_at: '2024-01-15T11:00:00Z',
-                    checklist_summary: { total: 6, passed: 2, failed: 1, pending: 3 },
-                    github_url: `https://github.com/${repos[0].owner}/${repos[0].name}/issues/38`,
-                  }}
-                  repoOwner={repos[0].owner}
-                  repoName={repos[0].name}
-                />
+                {pendingIssues.map((issue) => (
+                  <IssueCard
+                    key={issue.issue_number}
+                    issue={issue}
+                    repoOwner={repos[0].owner}
+                    repoName={repos[0].name}
+                  />
+                ))}
               </div>
             </div>
           </section>
@@ -299,3 +284,14 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+function formatRelativeTime(dateStr: string) {
+  const date = new Date(dateStr);
+  const diff = Math.max(0, Date.now() - date.getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes} minutes ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} days ago`;
+}
