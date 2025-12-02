@@ -53,7 +53,7 @@ async def list_user_installations(
 
     # Fetch installations from GitHub API using the user's access token
     # (stored in the user's GitHub token that was used during OAuth)
-    github_token = current_user.github_token
+    github_token = getattr(current_user, 'github_token', None)
     if not github_token:
         logger.warning(f"User {current_user.id} has no GitHub token stored")
         return {"installations": []}

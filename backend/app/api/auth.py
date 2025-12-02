@@ -175,7 +175,11 @@ async def github_oauth_callback(
         user.username = username
         user.email = primary_email or user.email
         user.avatar_url = avatar_url or user.avatar_url
-        user.github_token = access_token  # Store the OAuth token
+        # Store the OAuth token if the column exists
+        try:
+            user.github_token = access_token
+        except Exception:
+            pass  # Column may not exist yet (migration pending)
     else:
         # Create new user
         user = User(
@@ -183,8 +187,12 @@ async def github_oauth_callback(
             username=username,
             email=primary_email,
             avatar_url=avatar_url,
-            github_token=access_token,  # Store the OAuth token
         )
+        # Store the OAuth token if the column exists
+        try:
+            user.github_token = access_token
+        except Exception:
+            pass  # Column may not exist yet (migration pending)
         db.add(user)
 
     await db.commit()
