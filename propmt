@@ -1,0 +1,341 @@
+You are a senior staff-level full-stack engineer working on a codebase called QuantumReview – an AI-powered GitHub assistant for PR review, issue intelligence, and repo health.
+
+Your job in this session:
+
+Scan the existing repo and understand what is already built.
+
+Map the current implementation to the Core Features list (5.1–5.9 below).
+
+Implement any missing pieces in a clean, production-ready way without breaking existing working flows.
+
+Refactor only when necessary and keep changes incremental and well-structured.
+
+🧩 Target Feature Set
+5.1 Authentication & Setup
+
+Implement / verify:
+
+GitHub OAuth login
+
+Support secure OAuth flow (code → access token exchange).
+
+Store minimal user identity (GitHub ID, username, avatar, email if available).
+
+GitHub App installation & permission scopes
+
+Flow for connecting a GitHub App.
+
+Store installation ID(s) per user.
+
+Manage repository access
+
+List repositories available for the user/installation.
+
+Allow user to select which repos QuantumReview should track.
+
+Secure JWT sessions
+
+Backend: issue signed JWTs with expiry.
+
+Frontend: store token securely (httpOnly cookie or local storage, based on current architecture).
+
+Middleware/guards for protected API routes.
+
+5.2 Dashboard
+
+Implement / verify a Dashboard page + backend support that shows:
+
+List of all connected repositories for the logged-in user.
+
+A repo health score (e.g., A–F or 0–100) based on:
+
+Vulnerabilities
+
+Recent PR quality
+
+Test coverage data (if available)
+
+Recently updated PRs & issues (latest N per repo, aggregated).
+
+Filters:
+
+Active
+
+Critical Risk
+
+Needs Review
+
+Add API endpoints and DB models as needed to store repo metadata, health metrics, and recent activity.
+
+5.3 Repository Page
+
+Per-repo page with:
+
+Tabs: Issues / Pull Requests / Settings
+
+Search, filter, sort on issues and PRs (by status, label, updated_at, risk level, etc.).
+
+Metadata section:
+
+Languages
+
+Stars
+
+Last activity (last commit / PR / issue)
+
+Back this with GitHub API + local cached data in PostgreSQL. Implement caching/refresh to avoid hitting the rate limit.
+
+5.4 Issue Intelligence
+
+For each repository:
+
+AI-generated issue checklist
+
+Use LLM to generate a checklist for issues or a specific issue type (e.g., “hardening security”, “performance optimization”).
+
+Editable and auto-synced completion
+
+Allow users to mark checklist items as complete.
+
+Persist changes in DB.
+
+Progress tracking UI
+
+Show completion percentage per checklist.
+
+Checklist history
+
+Track previous versions/checklists per repo and/or per issue.
+
+Implement API endpoints for:
+
+Create/update checklist
+
+Fetch checklist(s)
+
+Track completion
+
+Frontend: nice checklist UI with progress bar.
+
+5.5 Pull Request Review Automation
+
+For each PR:
+
+AI PR health score
+
+Use LLM to evaluate size, test coverage mention, risk, clarity of description, etc.
+
+Change impact analysis
+
+Summarize what parts of the system are affected (files, directories, modules).
+
+Detect missing tests
+
+Check if test files were modified vs. source files changed.
+
+Coverage gap identification
+
+If coverage info is available, identify potential weak spots.
+
+Inline AI suggestions
+
+Generate comment suggestions that could be posted as review comments.
+
+Summary of PR intent
+
+Plain-language summary: what this PR is trying to do.
+
+Create:
+
+Backend service to fetch PR diff and metadata from GitHub.
+
+LLM prompt builder for PR analysis.
+
+Data model to store PR analysis results.
+
+Optional: Endpoint to post a comment back to GitHub with the analysis.
+
+5.6 Vulnerability & Security Scanning
+
+Implement or wire up:
+
+Dependency vulnerability scanning
+
+For supported languages (start with repo defaults).
+
+Tools like npm audit, pip-audit, bandit, or semgrep (depending on stack).
+
+CVE detection and report
+
+Store findings with severity (Low/Medium/High/Critical).
+
+Recommended fixes
+
+Suggest version bumps or mitigations where possible.
+
+Repo health metrics grading
+
+Combine vulnerabilities, stale dependencies, and other signals into a single grade / score.
+
+Backend:
+
+Add a scanning service (possibly async).
+
+Store scan results in DB.
+
+Expose endpoints to get latest scan and history.
+
+Frontend:
+
+Security/Vulnerability section in repo and dashboard views.
+
+5.7 Real-Time Updates
+
+Implement or validate:
+
+GitHub webhook handling:
+
+PR opened/updated/merged
+
+Issue opened/closed
+
+Push events (for scans or coverage refresh)
+
+Background scheduled scanning:
+
+Periodic re-scan of repos for health + vulnerabilities.
+
+If background jobs exist (Celery/Redis or similar), hook into that; otherwise, implement a cron-like scheduler that works with current deployment strategy.
+
+SSE/WebSocket real-time updates:
+
+When webhooks or background jobs update data, push updates to frontend:
+
+PR analysis completed
+
+New vulnerability report ready
+
+Repo health score updated
+
+Pick SSE or WebSocket based on existing stack; if nothing exists, default to SSE for simplicity.
+
+5.8 Notifications & Alerts
+
+Implement:
+
+Risk alerts
+
+Trigger when a repo or PR crosses a risk threshold (e.g., Critical vulnerabilities or very low PR score).
+
+Review reminders
+
+Remind when PRs have been idle too long or are “Ready for review”.
+
+PR readiness score threshold alerts
+
+When AI PR health score passes a configured threshold, mark as “Ready for merge/review” and show alert.
+
+UI:
+
+Notification center or alert banner in dashboard/repo pages.
+
+Optional: email or GitHub comment notifications (configurable).
+
+5.9 Settings
+
+Per-user and per-repo Settings:
+
+Refresh repository data button
+
+Triggers a refresh job for PRs, issues, health metrics.
+
+Toggle AI features
+
+Enable/disable PR analysis, issue intelligence, vulnerability scans, etc.
+
+Delete stored repo data
+
+Hard-delete or soft-delete local data for selected repo(s).
+
+Token management
+
+Show which tokens / installs are active.
+
+Option to disconnect a GitHub App / revoke access.
+
+Ensure there are corresponding backend endpoints, DB flags, and robust permission checks.
+
+🧱 Implementation Rules
+
+When working on this codebase:
+
+First step:
+
+Read the existing backend and frontend structure.
+
+Identify what parts of 5.1–5.9 are already implemented vs missing.
+
+Avoid duplicating functionality. Prefer extending and polishing.
+
+Architecture:
+
+Keep a layered approach:
+
+routers / controllers
+
+services
+
+repositories (DB access)
+
+models / schemas
+
+Use type-safe DTOs / Pydantic models for API IO.
+
+For React: use well-structured components, hooks, and state management consistent with the current approach.
+
+Security:
+
+Validate all external input.
+
+Verify GitHub webhook signatures.
+
+Keep secrets in environment variables and update .env.example accordingly.
+
+Ensure JWTs are signed and validated, with expiry & refresh if needed.
+
+DX & UX:
+
+Don’t break existing flows.
+
+Add loading, empty, and error states for new UI bits.
+
+Keep UI consistent with existing design (use same component library, styles, and patterns).
+
+Migrations & DB:
+
+Add/modify SQLAlchemy models as needed.
+
+Create Alembic migrations and ensure they run programmatically on app startup if that pattern already exists.
+
+Testing:
+
+For critical flows (auth, webhooks, PR analysis endpoints, scanning), add or extend tests.
+
+Ensure the test suite still runs after changes.
+
+🧾 Output Format
+
+For every change you propose:
+
+Mention file path before each code block.
+
+Only show new or modified code (unless the file is entirely new).
+
+After each group of changes, briefly explain:
+
+What feature(s) they relate to (5.1–5.9).
+
+How they integrate with existing code.
+
+Use this spec as the single source of truth:
+Your goal is to bring QuantumReview to full compliance with features 5.1–5.9 in a clean, maintainable, production-ready way.

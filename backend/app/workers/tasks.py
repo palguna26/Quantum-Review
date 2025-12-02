@@ -181,3 +181,38 @@ def handle_pr_closed(pr_payload: Dict[str, Any]) -> None:
     # Placeholder - can add cleanup logic here
     logger.info(f"PR closed: {pr_payload.get('pull_request', {}).get('number')}")
 
+
+def refresh_repository(payload: Dict[str, Any]) -> None:
+    """Refresh repository metadata and recent activity (RQ task)."""
+    import asyncio
+
+    async def _refresh():
+        db = await get_db_session()
+        try:
+            repo_id = payload.get("repo_id")
+            repo_full_name = payload.get("repo_full_name")
+            from sqlalchemy import select
+            from app.models.repo import Repo
+            result = await db.execute(select(Repo).where(Repo.id == repo_id))
+            repo = result.scalar_one_or_none()
+            if not repo:
+                return
+            # Optionally fetch latest metadata via GitHub API if installed
+            if repo.is_installed and repo.installation_id:
+                from app.services.github_auth import get_github_api_client_async
+                client = await get_github_api_client_async(repo.installation_id)
+                try:
+                    await client.get(f"/repos/{repo_full_name}")
+                finally:
+                    await client.aclose()
+            await db.commit()
+            logger.info(f"Refreshed repo {repo_full_name}")
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error refreshing repo: {e}", exc_info=True)
+            raise
+        finally:
+            await db.close()
+
+    asyncio.run(_refresh())
+

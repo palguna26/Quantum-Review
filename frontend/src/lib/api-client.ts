@@ -91,8 +91,19 @@ export const api = {
     return response.data;
   },
 
-  async getIssues(owner: string, repo: string): Promise<Issue[]> {
+  async getRepoIssues(owner: string, repo: string): Promise<Issue[]> {
     const response = await axiosInstance.get<Issue[]>(`/api/repos/${owner}/${repo}/issues`);
+    return response.data;
+  },
+
+  async getRepoPRs(owner: string, repo: string, params?: { status?: string; q?: string; sort?: string; order?: string; }): Promise<PRDetail[]> {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.q) query.set('q', params.q);
+    if (params?.sort) query.set('sort', params.sort);
+    if (params?.order) query.set('order', params.order);
+    const url = `/api/repos/${owner}/${repo}/prs${query.toString() ? `?${query.toString()}` : ''}`;
+    const response = await axiosInstance.get<PRDetail[]>(url);
     return response.data;
   },
 

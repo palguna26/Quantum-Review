@@ -14,7 +14,7 @@ from app.models.pr import PullRequest
 from app.schemas.user import UserResponse
 from app.schemas.repo import RepoSummaryResponse
 from app.schemas.issue import IssueResponse, ChecklistItemResponse, ChecklistSummary
-from app.schemas.pr import PRDetailResponse, TestResultResponse, CodeHealthIssueResponse, SuggestedTestResponse, CoverageAdviceResponse
+from app.schemas.pr import PRDetailResponse, TestResultResponse, CodeHealthIssueResponse, SuggestedTestResponse, CoverageAdviceResponse, PRListItemResponse
 from app.schemas.notification import NotificationResponse
 from app.models.pr import PullRequest, TestResult
 from app.models.code_health import CodeHealth
@@ -287,6 +287,10 @@ async def get_install_url(
 async def get_issues(
     owner: str,
     repo: str,
+    status: Optional[str] = Query(None),
+    q: Optional[str] = Query(None),
+    sort: Optional[str] = Query("updated"),
+    order: Optional[str] = Query("desc"),
     current_user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -304,11 +308,17 @@ async def get_issues(
         raise HTTPException(status_code=404, detail="Repository not found")
     
     # Get issues
-    issues_result = await db.execute(
-        select(Issue)
-        .where(Issue.repo_id == repo_obj.id)
-        .order_by(Issue.created_at.desc())
-    )
+    query = select(Issue).where(Issue.repo_id == repo_obj.id)
+    if status:
+        query = query.where(Issue.status == status)
+    if q:
+        query = query.where(Issue.title.ilike(f"%{q}%"))
+    if sort == "created":
+        query = query.order_by(Issue.created_at.asc() if order == "asc" else Issue.created_at.desc())
+    else:
+        query = query.order_by(Issue.updated_at.asc() if order == "asc" else Issue.updated_at.desc())
+
+    issues_result = await db.execute(query.limit(100))
     issues = issues_result.scalars().all()
     
     issue_responses = []
@@ -618,6 +628,57 @@ async def get_pr(
     )
 
 
+@router.get("/repos/{owner}/{repo}/prs", response_model=List[PRListItemResponse])
+async def list_prs(
+    owner: str,
+    repo: str,
+    status: Optional[str] = Query(None),
+    q: Optional[str] = Query(None),
+    sort: Optional[str] = Query("updated"),
+    order: Optional[str] = Query("desc"),
+    current_user: Optional[User] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """List PRs for a repo with optional filters and sorting."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    repo_full_name = f"{owner}/{repo}"
+    repo_result = await db.execute(select(Repo).where(Repo.repo_full_name == repo_full_name))
+    repo_obj = repo_result.scalar_one_or_none()
+    if not repo_obj:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    query = select(PullRequest).where(PullRequest.repo_id == repo_obj.id)
+    if status:
+        query = query.where(PullRequest.validation_status == status)
+    if q:
+        query = query.where(PullRequest.title.ilike(f"%{q}%"))
+
+    if sort == "created":
+        query = query.order_by(PullRequest.created_at.asc() if order == "asc" else PullRequest.created_at.desc())
+    elif sort == "health":
+        query = query.order_by(PullRequest.health_score.asc() if order == "asc" else PullRequest.health_score.desc())
+    else:
+        query = query.order_by(PullRequest.updated_at.asc() if order == "asc" else PullRequest.updated_at.desc())
+
+    rows = await db.execute(query.limit(50))
+    prs = rows.scalars().all()
+
+    items: List[PRListItemResponse] = []
+    for pr in prs:
+        items.append(PRListItemResponse(
+            pr_number=pr.pr_number,
+            title=pr.title or f"PR #{pr.pr_number}",
+            author=pr.author or "unknown",
+            created_at=pr.created_at.isoformat(),
+            health_score=pr.health_score or (pr.code_health.score if pr.code_health else 0),
+            validation_status=pr.validation_status,
+            github_url=f"https://github.com/{repo_full_name}/pull/{pr.pr_number}",
+        ))
+
+    return items
+
+
 @router.post("/repos/{owner}/{repo}/prs/{pr_number}/revalidate", status_code=status.HTTP_202_ACCEPTED)
 async def revalidate_pr(
     owner: str,
@@ -777,3 +838,28 @@ async def mark_notification_read_endpoint(
     
     return {"status": "ok", "message": "Notification marked as read"}
 
+@router.post("/repos/{owner}/{repo}/refresh", status_code=status.HTTP_202_ACCEPTED)
+async def refresh_repo(
+    owner: str,
+    repo: str,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Trigger background refresh for PRs, issues, and health metrics."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    repo_full_name = f"{owner}/{repo}"
+    repo_result = await db.execute(select(Repo).where(Repo.repo_full_name == repo_full_name))
+    repo_obj = repo_result.scalar_one_or_none()
+    if not repo_obj:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    from rq import Queue
+    import redis
+    from app.workers.tasks import refresh_repository
+
+    redis_conn = redis.from_url(settings.REDIS_URL)
+    queue = Queue("default", connection=redis_conn)
+    job = queue.enqueue(refresh_repository, {"repo_full_name": repo_full_name, "repo_id": repo_obj.id})
+    return {"status": "accepted", "job_id": job.id}

@@ -60,3 +60,13 @@ class PRDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class PRListItemResponse(BaseModel):
+    pr_number: int
+    title: str
+    author: str
+    created_at: str
+    health_score: int
+    validation_status: str
+    github_url: str
+

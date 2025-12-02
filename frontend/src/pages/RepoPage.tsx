@@ -9,7 +9,9 @@ import { ExternalLink, TrendingUp, Settings as SettingsIcon } from 'lucide-react
 import { api } from '@/lib/api';
 import { IssueCard } from '@/components/IssueCard';
 import { PRCard } from '@/components/PRCard';
-import type { User, RepoSummary, Issue } from '@/types/api';
+import type { User, RepoSummary, Issue, PRDetail } from '@/types/api';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const RepoPage = () => {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
@@ -17,6 +19,11 @@ const RepoPage = () => {
   const [repoData, setRepoData] = useState<RepoSummary | null>(null);
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [prs, setPrs] = useState<PRDetail[]>([]);
+  const [prStatus, setPrStatus] = useState<string>('');
+  const [prSort, setPrSort] = useState<string>('updated');
+  const [prOrder, setPrOrder] = useState<string>('desc');
+  const [prQuery, setPrQuery] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,17 +31,19 @@ const RepoPage = () => {
       if (!owner || !repo) return;
 
       try {
-        const [userData, repoDetails, reposData, issuesData] = await Promise.all([
+        const [userData, repoDetails, reposData, issuesData, prsData] = await Promise.all([
           api.getMe(),
           api.getRepo(owner, repo),
           api.getRepos(),
-          api.getIssues(owner, repo),
+          api.getRepoIssues(owner, repo),
+          api.getRepoPRs(owner, repo, { sort: 'updated', order: 'desc' }),
         ]);
         
         setUser(userData);
         setRepoData(repoDetails);
         setRepos(reposData);
         setIssues(issuesData);
+        setPrs(prsData);
       } catch (error) {
         console.error('Failed to load repo data:', error);
       } finally {
@@ -44,6 +53,24 @@ const RepoPage = () => {
 
     loadData();
   }, [owner, repo]);
+
+  useEffect(() => {
+    const fetchPrs = async () => {
+      if (!owner || !repo) return;
+      const params: any = {};
+      if (prStatus) params.status = prStatus;
+      if (prQuery) params.q = prQuery;
+      params.sort = prSort;
+      params.order = prOrder;
+      try {
+        const data = await api.getRepoPRs(owner, repo, params);
+        setPrs(data);
+      } catch (e) {
+        // noop
+      }
+    };
+    fetchPrs();
+  }, [owner, repo, prStatus, prSort, prOrder, prQuery]);
 
   if (loading) {
     return (
@@ -159,24 +186,63 @@ const RepoPage = () => {
           </TabsContent>
 
           <TabsContent value="prs" className="space-y-4">
-            <PRCard
-              prNumber={42}
-              title="Implement user authentication"
-              author="quantum-dev"
-              healthScore={92}
-              repoOwner={owner}
-              repoName={repo}
-              validationStatus="validated"
-            />
-            <PRCard
-              prNumber={38}
-              title="Add database migration system"
-              author="quantum-dev"
-              healthScore={85}
-              repoOwner={owner}
-              repoName={repo}
-              validationStatus="pending"
-            />
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Search PR titles"
+                value={prQuery}
+                onChange={(e) => setPrQuery(e.target.value)}
+                className="w-64"
+              />
+              <Select value={prStatus} onValueChange={(val) => setPrStatus(val)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="validated">Validated</SelectItem>
+                  <SelectItem value="needs_work">Needs Work</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={prSort} onValueChange={(val) => setPrSort(val)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="updated">Updated</SelectItem>
+                  <SelectItem value="created">Created</SelectItem>
+                  <SelectItem value="health">Health</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={prOrder} onValueChange={(val) => setPrOrder(val)}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Desc</SelectItem>
+                  <SelectItem value="asc">Asc</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {prs.length === 0 ? (
+              <Card className="glass-card p-12 text-center">
+                <p className="text-muted-foreground">No pull requests found</p>
+              </Card>
+            ) : (
+              prs.map((pr) => (
+                <PRCard
+                  key={pr.pr_number}
+                  prNumber={pr.pr_number}
+                  title={pr.title}
+                  author={pr.author}
+                  healthScore={pr.health_score}
+                  repoOwner={owner}
+                  repoName={repo}
+                  validationStatus={pr.validation_status}
+                />
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="settings">
